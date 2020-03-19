@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+#
+# Copyright 2020 JFrog, LTD.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"): you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+XRAY_URL=$1
+XRAY_USER=$2
+SPLUNK_URL=$3
+SPLUNK_PORT=$4
+SPLUNK_USER=$5
+SPLUNK_VIOLATION_INDEX=$6
+SPLUNK_VIOLATION_DETAIL_INDEX=$7
+SPLUNK_SOURCETYPE=$8
+XRAY_PASS=""
+SPLUNK_PASS=""
+if [[ -z "$9" ]]
+then
+  read -s -p "Enter Xray Password: " XRAY_PASS
+  echo ""
+  read -s -p "Enter Splunk Password: " SPLUNK_PASS
+  echo ""
+else
+  # passed over command line $@
+  shift
+  XRAY_PASS=$8
+  SPLUNK_PASS=$9
+  echo "It is insecure to supply authenication credentials over the command line prompt."
+  echo "Using Xray & Splunk password provided via command line."
+  echo ""
+fi
+
+echo "Welcome to the Xray Splunk Integration Docker Container"
+echo "This container's entrypoint.sh will process Xray Violations into the specified Splunk index"
+echo "It will also call for Xray Violation Details into either the same index or a separate index"
+echo ""
+echo "Found the following configuration parameters supplied:"
+echo "XRAY URL: ${XRAY_URL}"
+echo "XRAY USER: ${XRAY_USER}"
+echo "SPLUNK URL: ${SPLUNK_URL}"
+echo "SPLUNK PORT: ${SPLUNK_PORT}"
+echo "SPLUNK USER: ${SPLUNK_USER}"
+echo "SPLUNK VIOLATION INDEX: ${SPLUNK_VIOLATION_INDEX}"
+echo "SPLUNK VIOLATION DETAIL INDEX: ${SPLUNK_VIOLATION_DETAIL_INDEX}"
+echo "SPLUNK SOURCETYPE: ${SPLUNK_SOURCETYPE}"
+echo ""
+
+# Background the details and count scripts
+( ./scripts/download_xray_violation_details.py "${XRAY_URL}" "${XRAY_USER}" "${SPLUNK_URL}" "${SPLUNK_PORT}" "${SPLUNK_USER}" "${SPLUNK_VIOLATION_DETAIL_INDEX}" "${SPLUNK_SOURCETYPE}" "${XRAY_PASS}" "${SPLUNK_PASS}")&
+( ./scripts/display_splunk_counts.py "${SPLUNK_URL}" "${SPLUNK_PORT}" "${SPLUNK_USER}" "${SPLUNK_VIOLATION_INDEX}" "${SPLUNK_VIOLATION_DETAIL_INDEX}" "${SPLUNK_PASS}")&
+# Run the violation script
+while true
+do
+  SCRIPT_RUNNING=$(ps -ef | grep download_xray_data | wc -l)
+  if [[ "$SCRIPT_RUNNING" =~ (1) ]]
+  then
+    ./scripts/download_xray_data.py "${XRAY_URL}" "${XRAY_USER}" "${SPLUNK_URL}" "${SPLUNK_PORT}" "${SPLUNK_USER}" "${SPLUNK_VIOLATION_INDEX}" "${SPLUNK_SOURCETYPE}" "${XRAY_PASS}" "${SPLUNK_PASS}"
+  else
+    sleep 30
+  fi
+
+  # VERIFY THAT VIOLATION DETAILS IS STILL RUNNING IF NOT RESTART IT
+  SCRIPT_RUNNING=$(ps -ef | grep download_xray_violation_details | wc -l)
+  if [[ "$SCRIPT_RUNNING" =~ (1) ]]
+  then
+    ( ./scripts/download_xray_violation_details.py "${XRAY_URL}" "${XRAY_USER}" "${SPLUNK_URL}" "${SPLUNK_PORT}" "${SPLUNK_USER}" "${SPLUNK_VIOLATION_DETAIL_INDEX}" "${SPLUNK_SOURCETYPE}" "${XRAY_PASS}" "${SPLUNK_PASS}")&
+  fi
+
+  # VERIFY THAT THE COUNT DISPLAY IS STILL RUNNING IF NOT RESTART IT
+  # VERIFY THAT VIOLATION DETAILS IS STILL RUNNING IF NOT RESTART IT
+  SCRIPT_RUNNING=$(ps -ef | grep display_splunk_counts | wc -l)
+  if [[ "$SCRIPT_RUNNING" =~ (1) ]]
+  then
+    ( ./scripts/display_splunk_counts.py "${SPLUNK_URL}" "${SPLUNK_PORT}" "${SPLUNK_USER}" "${SPLUNK_VIOLATION_INDEX}" "${SPLUNK_VIOLATION_DETAIL_INDEX}" "${SPLUNK_PASS}")&
+  fi
+
+  # VERIFY THAT THE COUNT DISPLAY IS STILL RUNNING IF NOT RESTART IT
+done
