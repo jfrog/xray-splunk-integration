@@ -4,7 +4,33 @@ The goal of this project is only to provide the data to splunk in a reliable and
 Once the data is delivered to splunk customers will be required to consume the data however they desire.
 The data will be delivered in a JSON format to easy consumption in splunk however any specific consumption is beyond the scope of this project.
 
-## Getting Started
+## Setup
+
+Xray setup required:
+
+```
+Obtain URL of API
+Obtain username & password for API
+```
+
+Splunk setup required:
+```
+Obtain URL and Port for Splunk
+Obtain username & password for Splunk API
+```
+
+Splunk index setup:
+
+Create the indexes to hold the violation and violation details data:
+
+If you have existing indexes you want to use you can skip creating new ones.
+
+```
+violations
+violation_details
+```
+
+## Getting Started 
 
 The preferred way to run this integration is through Docker.
 
@@ -12,30 +38,24 @@ Assuming you have docker installed on the host machine you can run:
 
 ```
 docker build -t xray_splunk_integration .
-docker run -a stderr -a stdout -it xray_splunk_integration <xray_url> <xray_user> <splunk_url> <splunk_port> <splunk_user> <splunk_index> <splunk_detail_index> <splunk_sourcetype>
+docker run -a stderr -a stdout -it xray_splunk_integration <xray_url> <xray_user> <splunk_url> <splunk_port> <splunk_user> <splunk_index> <splunk_detail_index> <splunk_sourcetype> <xray_url_thread_count>
 ```
 
 It will then prompt you to enter the Xray user password and Splunk user password.
 
-This will then run the entrypoint that will keep the various scripts alive and running. 
+This will then run the entrypoint that will keep the integration and display count script alive.
 
 If one of the scripts does happen to die the entrypoint will restart it for you.
  
 If the container happens to die you can simply re-run the docker command to begin where you left off.
 
-The container will run two scripts one to pull the violations per batch code located at:
+The container will run two scripts one to pull the violations and details to save them into splunk:
 
 ```
-scripts/download_xray_data.py
+scripts/xray_splunk_integration.py
 ```
 
-The second script will run and pull xray violation details by url. Note currently this only supports one record at a time. Code located at:
-
-```
-scripts/download_xray_violation_details.py
-```
-
-The container also runs a stat script to display the current counts of the two specified indexes being used to store data:
+The second script runs a stat script to display the current counts of the two specified indexes being used to store data:
 
 ``` 
 scripts/display_splunk_counts.py
@@ -54,6 +74,7 @@ Pip3
 ```
 pip3 install requests
 pip3 install datetime
+pip3 install futures
 ```
 
 [Splunk Python SDK](https://github.com/splunk/splunk-sdk-python)
@@ -74,7 +95,7 @@ Next you will need a splunk environment to upload the xray violation data into. 
 Once you have Xray and Splunk environments up you can then run the container:
 
 ```
-docker run -a stderr -a stdout -it xray_splunk_integration <xray_url> <xray_user> <splunk_url> <splunk_port> <splunk_user> <splunk_index> <splunk_detail_index> <splunk_sourcetype>
+docker run -a stderr -a stdout -it xray_splunk_integration <xray_url> <xray_user> <splunk_url> <splunk_port> <splunk_user> <splunk_index> <splunk_detail_index> <splunk_sourcetype> <xray_url_thread_count>
 ```
 
 This will start the siphon from Xray and upload the data into Splunk.
@@ -97,7 +118,7 @@ To run the integration you will need to download and install Docker.
 Once you have docker installed you can run the integration with this command:
 
 ```
-docker run -a stderr -a stdout -it xray_splunk_integration <xray_url> <xray_user> <splunk_url> <splunk_port> <splunk_user> <splunk_index> <splunk_detail_index> <splunk_sourcetype>
+docker run -a stderr -a stdout -it xray_splunk_integration <xray_url> <xray_user> <splunk_url> <splunk_port> <splunk_user> <splunk_index> <splunk_detail_index> <splunk_sourcetype> <xray_url_thread_count>
 ```
 
 The following args will need to be specified:
@@ -111,6 +132,7 @@ splunk_user: the user to be used for auth against splunk instance
 splunk_index: the index on splunk to write this data into for the violation records
 splunk_detail_index: the index on splunk to write this data into for the violation detail records
 splunk_sourcetype: the source type to be given to this data stream in splunk
+xray_url_thread_count: integer value of the number of concurrent threads to read xray violation details url
 ```
 
 Optionally you can pass at the end:

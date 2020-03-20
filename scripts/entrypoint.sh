@@ -22,8 +22,10 @@ SPLUNK_USER=$5
 SPLUNK_VIOLATION_INDEX=$6
 SPLUNK_VIOLATION_DETAIL_INDEX=$7
 SPLUNK_SOURCETYPE=$8
+XRAY_URL_THREAD_COUNT=$9
 XRAY_PASS=""
 SPLUNK_PASS=""
+shift
 if [[ -z "$9" ]]
 then
   read -s -p "Enter Xray Password: " XRAY_PASS
@@ -53,36 +55,28 @@ echo "SPLUNK USER: ${SPLUNK_USER}"
 echo "SPLUNK VIOLATION INDEX: ${SPLUNK_VIOLATION_INDEX}"
 echo "SPLUNK VIOLATION DETAIL INDEX: ${SPLUNK_VIOLATION_DETAIL_INDEX}"
 echo "SPLUNK SOURCETYPE: ${SPLUNK_SOURCETYPE}"
+echo "XRAY URL DETAIL THREAD COUNT: ${XRAY_URL_THREAD_COUNT}"
 echo ""
 
-# Background the details and count scripts
-( ./scripts/download_xray_violation_details.py "${XRAY_URL}" "${XRAY_USER}" "${SPLUNK_URL}" "${SPLUNK_PORT}" "${SPLUNK_USER}" "${SPLUNK_VIOLATION_DETAIL_INDEX}" "${SPLUNK_SOURCETYPE}" "${XRAY_PASS}" "${SPLUNK_PASS}")&
+# BACKGROUND PROCESS THE DISPLAY SPLUNK COUNTS
 ( ./scripts/display_splunk_counts.py "${SPLUNK_URL}" "${SPLUNK_PORT}" "${SPLUNK_USER}" "${SPLUNK_VIOLATION_INDEX}" "${SPLUNK_VIOLATION_DETAIL_INDEX}" "${SPLUNK_PASS}")&
-# Run the violation script
+
+# RUN THE INTEGRATION INDEFINITELY IN THE CONTAINER
 while true
 do
-  SCRIPT_RUNNING=$(ps -ef | grep download_xray_data | wc -l)
+  SCRIPT_RUNNING=$(ps -ef | grep xray_splunk_integration | wc -l)
   if [[ "$SCRIPT_RUNNING" =~ (1) ]]
   then
-    ./scripts/download_xray_data.py "${XRAY_URL}" "${XRAY_USER}" "${SPLUNK_URL}" "${SPLUNK_PORT}" "${SPLUNK_USER}" "${SPLUNK_VIOLATION_INDEX}" "${SPLUNK_SOURCETYPE}" "${XRAY_PASS}" "${SPLUNK_PASS}"
+    ./scripts/xray_splunk_integration.py "${XRAY_URL}" "${XRAY_USER}" "${SPLUNK_URL}" "${SPLUNK_PORT}" "${SPLUNK_USER}" "${SPLUNK_VIOLATION_INDEX}" "${SPLUNK_VIOLATION_DETAIL_INDEX}" "${SPLUNK_SOURCETYPE}" "${XRAY_URL_THREAD_COUNT}" "${XRAY_PASS}" "${SPLUNK_PASS}"
+    sleep 15
   else
     sleep 30
   fi
 
-  # VERIFY THAT VIOLATION DETAILS IS STILL RUNNING IF NOT RESTART IT
-  SCRIPT_RUNNING=$(ps -ef | grep download_xray_violation_details | wc -l)
-  if [[ "$SCRIPT_RUNNING" =~ (1) ]]
-  then
-    ( ./scripts/download_xray_violation_details.py "${XRAY_URL}" "${XRAY_USER}" "${SPLUNK_URL}" "${SPLUNK_PORT}" "${SPLUNK_USER}" "${SPLUNK_VIOLATION_DETAIL_INDEX}" "${SPLUNK_SOURCETYPE}" "${XRAY_PASS}" "${SPLUNK_PASS}")&
-  fi
-
   # VERIFY THAT THE COUNT DISPLAY IS STILL RUNNING IF NOT RESTART IT
-  # VERIFY THAT VIOLATION DETAILS IS STILL RUNNING IF NOT RESTART IT
   SCRIPT_RUNNING=$(ps -ef | grep display_splunk_counts | wc -l)
   if [[ "$SCRIPT_RUNNING" =~ (1) ]]
   then
     ( ./scripts/display_splunk_counts.py "${SPLUNK_URL}" "${SPLUNK_PORT}" "${SPLUNK_USER}" "${SPLUNK_VIOLATION_INDEX}" "${SPLUNK_VIOLATION_DETAIL_INDEX}" "${SPLUNK_PASS}")&
   fi
-
-  # VERIFY THAT THE COUNT DISPLAY IS STILL RUNNING IF NOT RESTART IT
 done

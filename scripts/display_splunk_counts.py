@@ -39,9 +39,9 @@ splunk_violations_indexname, splunk_details_indexname = "", ""
 def input_arg_check():
     # Get arguments
     if  (len(sys.argv) != 7):
-        errorMsg="Required args: <splunk_url> <splunk_port> <splunk_user> <splunk_violation_index> <splunk_detail_index> <splunk_pass>"
-        print(errorMsg)
-        logging.error(errorMsg)
+        exit()
+
+    if (len(sys.argv[1]) == 0):
         exit()
 
 def query_splunk_index_count(service, index_name):

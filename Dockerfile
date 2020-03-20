@@ -37,8 +37,7 @@ RUN git clone https://github.com/splunk/splunk-sdk-python.git
 ENV PYTHONPATH /root/workdir/splunk-sdk-python
 
 # Copy over script into working directory
-COPY scripts/download_xray_data.py /root/workdir/scripts/download_xray_data.py
-COPY scripts/download_xray_violation_details.py /root/workdir/scripts/download_xray_violation_details.py
+COPY scripts/xray_splunk_integration.py /root/workdir/scripts/xray_splunk_integration.py
 COPY scripts/display_splunk_counts.py /root/workdir/scripts/display_splunk_counts.py
 COPY scripts/entrypoint.sh /root/workdir/scripts/entrypoint.sh
 
