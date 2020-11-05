@@ -1,3 +1,14 @@
+# DEPRECATION NOTICE!
+
+This effort has been merged into the overall log analytic solutions for Splunk, Elastic, Datadog, and Prometheus.
+
+Follow the Fluentd setup for your log provider [here.](https://www.github.com/jfrog/log-analytics)
+
+Configuration options for SIEM plugin in Log Analytics available [here.](https://github.com/jfrog/log-analytics/blob/master/fluentd/plugins/input/fluent-plugin-jfrog-siem/README.md)
+
+Using the new version of the integration will enable the common data model mapping into SIEM for the relevant log provider such as Splunk or Elastic.
+
+
 # Xray Splunk Integration
 This project will integrate xray violations into splunk to be consumed as part of the data lake.
 The goal of this project is only to provide the data to splunk in a reliable and consistent manner.
